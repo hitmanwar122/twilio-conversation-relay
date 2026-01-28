@@ -123,13 +123,38 @@ app.post('/voice/handoff', async (req, res) => {
     res.send(twiml.toString());
 });
 
-// API endpoint to get transcript for a call
-app.get('/api/transcript/:callSid', (req, res) => {
-    const conversation = conversations.get(req.params.callSid);
+// API endpoint to get transcript for a call (supports both CallSid and TaskSid)
+app.get('/api/transcript/:identifier', async (req, res) => {
+    const identifier = req.params.identifier;
+
+    // First, try direct lookup by CallSid
+    let conversation = conversations.get(identifier);
+
+    // If not found and identifier starts with WT (TaskSid), look up via Twilio API
+    if (!conversation && identifier.startsWith('WT')) {
+        try {
+            console.log(`Looking up TaskSid ${identifier} via Twilio API`);
+            const task = await twilioClient.taskrouter.v1
+                .workspaces(process.env.FLEX_WORKSPACE_SID)
+                .tasks(identifier)
+                .fetch();
+
+            const attributes = JSON.parse(task.attributes);
+            const callSid = attributes.callSid || attributes.call_sid;
+
+            if (callSid) {
+                console.log(`Found callSid ${callSid} for task ${identifier}`);
+                conversation = conversations.get(callSid);
+            }
+        } catch (error) {
+            console.error(`Error looking up task ${identifier}:`, error.message);
+        }
+    }
+
     if (conversation) {
         res.json({
             success: true,
-            callSid: req.params.callSid,
+            callSid: conversation.callSid,
             transcript: conversation.transcript,
             callerPhone: conversation.callerPhone,
             startTime: conversation.startTime

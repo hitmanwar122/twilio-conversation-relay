@@ -43,15 +43,19 @@ npm install
 
 ### 2. Configure Environment
 
-Edit `.env` with your credentials:
+Create a `.env` file with your credentials:
 
 ```env
 TWILIO_ACCOUNT_SID=your_account_sid
 TWILIO_AUTH_TOKEN=your_auth_token
 TWILIO_PHONE_NUMBER=+1234567890
 OPENAI_API_KEY=sk-your-key
+FLEX_WORKSPACE_SID=WS_your_workspace_sid
+FLEX_WORKFLOW_SID=WW_your_workflow_sid
 PORT=3000
 ```
+
+Get your Flex Workspace and Workflow SIDs from the [Twilio Console > TaskRouter](https://console.twilio.com/us1/develop/taskrouter/workspaces).
 
 ### 3. Start Server
 
@@ -82,7 +86,16 @@ https://your-ngrok-url.ngrok.io/voice/incoming
 | `/voice/incoming` | POST | TwiML for incoming calls |
 | `/voice/handoff` | POST | Handles escalation to agent |
 | `/monitor` | GET | View active conversations |
-| `/api/transcript/:callSid` | GET | Get transcript for a call |
+| `/api/transcript/:identifier` | GET | Get transcript by CallSid (CA...) or TaskSid (WT...) |
+
+### Transcript API
+
+The transcript endpoint supports two identifier formats:
+
+1. **CallSid** (e.g., `CA1234...`) - Direct lookup from in-memory store
+2. **TaskSid** (e.g., `WT1234...`) - Looks up the task via Twilio API to find the associated CallSid
+
+This is important for Salesforce integration since `VoiceCall.VendorCallKey` stores the TaskSid, not the CallSid.
 
 ## WebSocket Protocol
 
